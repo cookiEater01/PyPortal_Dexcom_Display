@@ -1,6 +1,7 @@
 import json
 from adafruit_datetime import datetime, timedelta
 from utils import mgdl_to_mmol, get_dt_from_epoch
+from sprites import Sprites
 
 from const import (
     DEXCOM_URL,
@@ -11,6 +12,16 @@ from const import (
     DEXCOM_GLUCOSE_READINGS_ENDPOINT,
 )
 
+TRENDS = {
+    "Flat": 1,
+    "FortyFiveUp": 2,
+    "SingleUp": 3,
+    "DoubleUp": 4,
+    "FortyFiveDown": 5,
+    "SingleDown": 6,
+    "DoubleDown": 7,
+}
+
 
 class GlucoseValue:
     # Class for storing latest glucose value, trend and time of measurement
@@ -19,12 +30,29 @@ class GlucoseValue:
         self.mgdl = mgdl
         self.mmol = mgdl_to_mmol(mgdl)
         self.trend = trend
+        self.trend_numeric = TRENDS[self.trend]
         self.time = datetime.fromisoformat(get_dt_from_epoch(time))
         self.next_fetch = self.time + timedelta(minutes=5, seconds=30)
         print(self)
 
     def __repr__(self):
         return f"<GlucoseValue mgdl:{self.mgdl} mmol:{self.mmol} trend:{self.trend} time:{self.time} next_fetch:{self.next_fetch}>"
+
+    def update_view(self, sprites, value_label, unit_label, update_label):
+        if self.mmol <= 4.0:
+            sprites.update_tile(self.trend_numeric + 8)
+            value_label.color = 0xFFFFFF
+            unit_label.color = 0xFFFFFF
+        elif self.mmol >= 8.0:
+            sprites.update_tile(self.trend_numeric + 16)
+            value_label.color = 0x000000
+            unit_label.color = 0x000000
+        else:
+            sprites.update_tile(self.trend_numeric)
+            value_label.color = 0x000000
+            unit_label.color = 0x000000
+        value_label.text = str(self.mmol)
+        update_label.text = "{:02d}:{:02d}".format(self.time.time().hour, self.time.time().minute)
 
 
 class Dexcom:
