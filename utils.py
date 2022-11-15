@@ -2,7 +2,7 @@ from adafruit_datetime import datetime
 
 # http://www.bcchildrens.ca/endocrinology-diabetes-site/documents/glucoseunits.pdf
 def mgdl_to_mmol(mgdl: int):
-    return round(mgdl / 18, 1)
+    return round(mgdl / 18.0182, 1)
 
 
 def get_dt_from_epoch(rsp: str):
