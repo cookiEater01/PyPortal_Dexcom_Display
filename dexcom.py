@@ -2,6 +2,8 @@ import json
 from adafruit_datetime import datetime, timedelta
 from utils import mgdl_to_mmol, get_dt_from_epoch
 from sprites import Sprites
+from session import Session
+from glucose_value import GlucoseValue
 
 from const import (
     DEXCOM_URL,
@@ -12,85 +14,28 @@ from const import (
     DEXCOM_GLUCOSE_READINGS_ENDPOINT,
 )
 
-TRENDS = {
-    "Flat": 1,
-    "FortyFiveUp": 2,
-    "SingleUp": 3,
-    "DoubleUp": 4,
-    "FortyFiveDown": 5,
-    "SingleDown": 6,
-    "DoubleDown": 7,
-}
-
-
-class GlucoseValue:
-    # Class for storing latest glucose value, trend and time of measurement
-
-    def __init__(self, mgdl: int, trend: str, time: str):
-        self.mgdl = mgdl
-        self.mmol = mgdl_to_mmol(mgdl)
-        self.trend = trend
-        self.trend_numeric = TRENDS[self.trend]
-        self.time = datetime.fromisoformat(get_dt_from_epoch(time))
-        self.next_fetch = self.time + timedelta(minutes=5, seconds=30)
-        print(self)
-
-    def __repr__(self):
-        return f"<GlucoseValue mgdl:{self.mgdl} mmol:{self.mmol} trend:{self.trend} time:{self.time} next_fetch:{self.next_fetch}>"
-
-    def update_view(self, sprites, value_label, unit_label, update_label):
-        if self.mmol <= 4.0:
-            sprites.update_tile(self.trend_numeric + 8)
-            value_label.color = 0xFFFFFF
-            unit_label.color = 0xFFFFFF
-        elif self.mmol >= 8.0:
-            sprites.update_tile(self.trend_numeric + 16)
-            value_label.color = 0x000000
-            unit_label.color = 0x000000
-        else:
-            sprites.update_tile(self.trend_numeric)
-            value_label.color = 0x000000
-            unit_label.color = 0x000000
-        value_label.text = str(self.mmol)
-        update_label.text = "{:02d}:{:02d}".format(self.time.time().hour, self.time.time().minute)
-
 
 class Dexcom:
     # Class for communitaion with Dexcom Share API.
 
-    def __init__(self, username: str, password: str, requests, us: bool = False):
+    def __init__(self, username: str, password: str, requests, us: bool = False, use_mmol: bool = True):
         if us is True:
             self.base_url = DEXCOM_URL_US
         else:
             self.base_url = DEXCOM_URL
         self.username = username
         self.password = password
-        self.session_id = None
+        self.session = None
         self.account_id = None
-        self.validate_account()
+        self.next_update = None
+        self.use_mmol = use_mmol
+        self.connect(requests)
+
+
+    def connect(self, requests):
         self.get_account_id(requests)
         self.get_session_id(requests)
 
-    def validate_account(self):
-        # Validate credentials
-        if not self.username:
-            print("Username cannot be empty.")
-            raise
-        if not self.password:
-            print("Password cannot be empty.")
-            raise
-
-    def validate_account_id(self):
-        # Validate if account_id is set
-        if self.account_id is None:
-            print("account_id is None")
-            raise
-
-    def validate_session_id(self):
-        # Validate if session_id is set
-        if self.session_id is None:
-            print("session_id is None")
-            raise
 
     def get_account_id(self, requests):
         # Get Account Id
@@ -125,8 +70,6 @@ class Dexcom:
         print("-" * 40)
         print("Getting Dexcom Share Session ID...")
 
-        self.validate_account_id()
-
         body = {
             "applicationId": DEXCOM_APPLICATION_ID,
             "accountId": self.account_id,
@@ -146,7 +89,7 @@ class Dexcom:
         print("Response: ", response.text.strip('"'))
         print("-" * 40)
 
-        self.session_id = response.text.strip('"')
+        self.session = Session(response.text.strip('"'), datetime.now())
 
         response.close()
 
@@ -155,10 +98,11 @@ class Dexcom:
         print("-" * 40)
         print("Getting latest glucose value...")
 
-        self.validate_session_id()
+        if self.session.is_session_valid() is False:
+            self.connect()
 
         body = {
-            "sessionId": self.session_id,
+            "sessionId": self.session.session_id,
             "maxCount": 1,
             "minutes": 10,
         }
@@ -166,6 +110,8 @@ class Dexcom:
         header = {"Content-Type": "application/json"}
 
         print("Posting request for glucose value")
+
+
 
         response = requests.post(
             self.base_url + DEXCOM_GLUCOSE_READINGS_ENDPOINT,
@@ -180,6 +126,10 @@ class Dexcom:
         print("-" * 40)
 
         response.close()
+
+        self.next_update = datetime.now() + timedelta(minutes=2)
+        self.num_of_errors = 0
+        self.session.last_used_time = datetime.now()
 
         if len(response_array) > 0:
             latest = response_array[0]
