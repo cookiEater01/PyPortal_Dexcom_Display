@@ -62,3 +62,20 @@ def set_image_sprites(group, filename, displayio, width, height, default_sprite)
     )
 
     group.append(image_sprite)
+
+def prepare_label(font, text: str, colour, anchor_point, anchored_position, group):
+    label = Label(font)
+    label.text = text
+    label.color = colour
+    label.anchor_point = anchor_point
+    label.anchored_position = anchored_position
+    group.append(label)
+    return label
+
+def prepare_group(x=0, y=0, scale=1):
+    group = displayio.Group()
+    group.x = x
+    group.y = y
+    group.scale = scale
+    return group
+
