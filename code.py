@@ -12,7 +12,7 @@ import adafruit_requests as requests
 import adafruit_touchscreen
 import displayio
 from adafruit_pyportal import PyPortal
-from display_utils import black_background, text_box, load_sprite_sheet
+from display_utils import black_background, text_box, load_sprite_sheet, prepare_label, prepare_group
 from adafruit_display_text.label import Label
 from adafruit_bitmap_font import bitmap_font
 from adafruit_button import Button
@@ -25,11 +25,12 @@ from dexcom import Dexcom, GlucoseValue
 # Time
 import rtc
 from adafruit_datetime import datetime, timedelta
+from time_zone import TimeZone
 
 # Sensors
 from analogio import AnalogIn
 
-from random import randrange
+from const import TIMEZONE
 
 
 print("Starting up...")
@@ -85,9 +86,7 @@ glucose_view = displayio.Group()
 screen_group.append(loading_view)
 
 # Group for loading image(s)
-loading_image_group = displayio.Group()
-loading_image_group.x = 110
-loading_image_group.y = 40
+loading_image_group = prepare_group(110,40)
 
 # Loading images sprites
 loading_tg = load_sprite_sheet("/images/loading_sprites.bmp", 100, 100)
@@ -97,14 +96,9 @@ loading_sprites.add_to_group()
 # Add loading image group to  loading view
 loading_view.append(loading_image_group)
 
-# Group for loading label
+# Group and loading label
 loading_label_group = displayio.Group()
-
-loading_status_label = Label(terminalio.FONT)
-loading_status_label.text = "Connecting to WIFI ..."
-loading_status_label.anchor_point = (0.5, 0.5)
-loading_status_label.anchored_position = (WIDTH / 2, HEIGHT * 3 / 4)
-loading_label_group.append(loading_status_label)
+loading_status_label = prepare_label(terminalio.FONT, "Connecting to WIFI ...", 0xFFFFFF, (0.5, 0.5), (WIDTH / 2, HEIGHT * 3 / 4), loading_label_group)
 
 # Append loading_label_group to loading view
 loading_view.append(loading_label_group)
@@ -157,6 +151,8 @@ while now_utc is None:
         pass
 rtc.RTC().datetime = now_utc
 
+offset = TimeZone(TIMEZONE, requests)
+
 # Show last sprite in loading sequence and update and break text
 loading_sprites.update_tile(2)
 text_box(
@@ -182,9 +178,7 @@ print("-" * 40)
 # Prepare glucose view
 
 # Glucose image(s) group
-glucose_image_group = displayio.Group()
-glucose_image_group.x = 55 + 17
-glucose_image_group.y = 10
+glucose_image_group = prepare_group(55+17, 10)
 
 # Add glucose image group to view
 glucose_view.append(glucose_image_group)
@@ -197,14 +191,7 @@ glucose_sprites.add_to_group()
 # Group for glucose value
 glucose_value_group = displayio.Group()
 
-glucose_label = Label(font_glucose)
-glucose_label.text = ""
-glucose_label.color = 0x000000
-glucose_label.anchor_point = (0.5, 0.5)
-glucose_label.anchored_position = (156, 121)
-
-# Add glucose value label to group
-glucose_value_group.append(glucose_label)
+glucose_label = prepare_label(font_glucose, "", 0x000000, (0.5, 0.5), (156, 121), glucose_value_group)
 
 # Add glucose value group to view
 glucose_view.append(glucose_value_group)
@@ -212,14 +199,7 @@ glucose_view.append(glucose_value_group)
 # Group for glucose unit
 glucose_unit_group = displayio.Group()
 
-glucose_unit_label = Label(terminalio.FONT)
-glucose_unit_label.text = "mmol/L"
-glucose_unit_label.color = 0x000000
-glucose_unit_label.anchor_point = (0.5, 0.5)
-glucose_unit_label.anchored_position = (156, 165)
-
-# Add glucose unit label to group
-glucose_unit_group.append(glucose_unit_label)
+glucose_unit_label = prepare_label(terminalio.FONT, "mmol/L" if dexcom_object.use_mmol is True else "mg/dl", 0x000000, (0.5, 0.5), (156, 165), glucose_unit_group)
 
 # Add glucose unit group to view
 glucose_view.append(glucose_unit_group)
@@ -227,21 +207,14 @@ glucose_view.append(glucose_unit_group)
 # Group for last glucose update
 glucose_update_group = displayio.Group()
 
-glucose_update_label = Label(terminalio.FONT)
-glucose_update_label.text = ""
-glucose_update_label.color = 0xFFFFFF
-glucose_update_label.anchor_point = (0.5, 0.5)
-glucose_update_label.anchored_position = (156, 230)
-
-# Add glucose unit label to group
-glucose_update_group.append(glucose_update_label)
+glucose_update_label = prepare_label(terminalio.FONT, "", 0xFFFFFF, (0.5, 0.5), (156, 230), glucose_update_group)
 
 # Add glucose unit group to view
 glucose_view.append(glucose_update_group)
 
 # Show correct values on screen
 glucose_value.update_view(
-    glucose_sprites, glucose_label, glucose_unit_label, glucose_update_label
+    glucose_sprites, glucose_label, glucose_unit_label, glucose_update_label, offset
 )
 
 # Switch views
@@ -262,8 +235,8 @@ while True:
     # Disable update when screen is off
     if time.monotonic() - timer >= 30.0 and board.DISPLAY.brightness > 0.0:
         timer = time.monotonic()
-        if datetime.now() >= glucose_value.next_fetch:
+        if datetime.now() >= dexcom_object.next_update:
             glucose_value = dexcom_object.get_latest_glucose_value(requests)
             glucose_value.update_view(
-                glucose_sprites, glucose_label, glucose_unit_label, glucose_update_label
+                glucose_sprites, glucose_label, glucose_unit_label, glucose_update_label, offset
             )
