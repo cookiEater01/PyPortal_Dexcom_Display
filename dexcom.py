@@ -99,7 +99,7 @@ class Dexcom:
         print("Getting latest glucose value...")
 
         if self.session.is_session_valid() is False:
-            self.connect()
+            self.connect(requests)
 
         body = {
             "sessionId": self.session.session_id,
