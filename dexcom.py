@@ -122,7 +122,6 @@ class Dexcom:
         response_array = response.json()
 
         print("Response lenght: ", len(response_array))
-        print("Response: ", response_array)
         print("-" * 40)
 
         response.close()
@@ -133,6 +132,6 @@ class Dexcom:
 
         if len(response_array) > 0:
             latest = response_array[0]
-            return GlucoseValue(int(latest["Value"]), latest["Trend"], latest["WT"])
+            return GlucoseValue(int(latest["Value"]), latest["Trend"], get_dt_from_epoch(latest["WT"]))
         else:
-            return None
+            return GlucoseValue(None, "Unknown", datetime.now().isoformat())
