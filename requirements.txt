@@ -1,0 +1,17 @@
+adafruit_miniqr==1.3.14
+adafruit_pixelbuf==1.1.8
+adafruit_touchscreen==1.1.17
+adafruit_datetime==1.2.2
+adafruit_requests==1.12.10
+adafruit_sdcard==3.3.15
+neopixel==6.3.6
+adafruit_fakerequests==1.0.11
+simpleio==3.0.8
+adafruit_minimqtt==6.0.0
+adafruit_portalbase==1.14.4
+adafruit_pyportal==6.2.8
+adafruit_bitmap_font==1.5.11
+adafruit_bus_device==5.2.3
+adafruit_display_text==2.22.12
+adafruit_esp32spi==5.0.5
+adafruit_io==5.6.12
