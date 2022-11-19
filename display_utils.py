@@ -1,6 +1,8 @@
 from adafruit_display_text.label import Label
 import displayio
 
+# Sound Effects
+soundBeep = "/sounds/beep.wav"
 
 def black_background(displayio, width, height, colour=0x0):
     # Default is black background
@@ -79,3 +81,6 @@ def prepare_group(x=0, y=0, scale=1):
     group.scale = scale
     return group
 
+def play_tap_sound(pyportal):
+    pyportal.play_file(soundBeep)
+    print("Touch detected.")
