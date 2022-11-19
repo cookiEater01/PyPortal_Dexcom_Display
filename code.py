@@ -12,12 +12,12 @@ import adafruit_requests as requests
 import adafruit_touchscreen
 import displayio
 from adafruit_pyportal import PyPortal
-from display_utils import black_background, text_box, load_sprite_sheet, prepare_label, prepare_group
+from display_utils import black_background, text_box, load_sprite_sheet, prepare_label, prepare_group, play_tap_sound
 from adafruit_display_text.label import Label
 from adafruit_bitmap_font import bitmap_font
-from adafruit_button import Button
 from sprites import Sprites
 import terminalio
+from display_mode import DisplayMode
 
 # Dexcom
 from dexcom import Dexcom, GlucoseValue
@@ -34,11 +34,6 @@ from const import TIMEZONE
 
 
 print("Starting up...")
-
-# Sound Effects
-soundDemo = "/sounds/sound.wav"
-soundBeep = "/sounds/beep.wav"
-soundTab = "/sounds/tab.wav"
 
 # Board settings
 pixel = neopixel.NeoPixel(board.NEOPIXEL, 1, brightness=0)
@@ -82,6 +77,7 @@ screen_group.append(black_background(displayio, WIDTH, HEIGHT))
 # Define two views
 loading_view = displayio.Group()
 glucose_view = displayio.Group()
+settings_view = displayio.Group()
 
 screen_group.append(loading_view)
 
@@ -177,6 +173,16 @@ print("-" * 40)
 
 # Prepare glucose view
 
+# Group for glucose unit
+settings_icon_group = prepare_group(270, 0)
+
+settings_icon_tg = load_sprite_sheet("/images/gear.bmp", 50, 50)
+settings_sprites = Sprites(settings_icon_tg, 1, settings_icon_group)
+settings_sprites.add_to_group()
+
+# Add glucose unit group to view
+glucose_view.append(settings_icon_group)
+
 # Glucose image(s) group
 glucose_image_group = prepare_group(55+17, 10)
 
@@ -214,23 +220,90 @@ glucose_view.append(glucose_update_group)
 
 # Show correct values on screen
 glucose_value.update_view(
-    glucose_sprites, glucose_label, glucose_unit_label, glucose_update_label, offset
+    glucose_sprites, glucose_label, glucose_unit_label, glucose_update_label, offset, dexcom_object.use_mmol
 )
 
 # Switch views
 screen_group.remove(loading_view)
 screen_group.append(glucose_view)
 
+display_mode = DisplayMode()
+
+# Back button group
+back_button_group = prepare_group(0, 0)
+sleep_button_group = prepare_group(50, 80)
+unit_button_group = prepare_group(190, 80)
+
+# Add back image group to view
+settings_view.append(back_button_group)
+
+# Back image sprite
+back_tg = load_sprite_sheet("/images/previous.bmp", 50, 50)
+back_sprites = Sprites(back_tg, 1, back_button_group)
+back_sprites.add_to_group()
+
+# Add sleep image group to view
+settings_view.append(sleep_button_group)
+
+# Sleep image sprite
+sleep_tg = load_sprite_sheet("/images/sleep.bmp", 80, 80)
+sleep_sprites = Sprites(sleep_tg, 1, sleep_button_group)
+sleep_sprites.add_to_group()
+
+# Add unit image group to view
+settings_view.append(unit_button_group)
+
+# Unit image sprite
+unit_tg = load_sprite_sheet("/images/unit.bmp", 80, 80)
+unit_sprites = Sprites(unit_tg, 1, unit_button_group)
+unit_sprites.add_to_group()
+
+# Unit label
+unit_label_top_group = displayio.Group()
+unit_label_top_label = prepare_label(terminalio.FONT, "mmol/L", 0xFFFFFF, (0.5, 0.5), (230, 70), unit_label_top_group)
+settings_view.append(unit_label_top_group)
+
+unit_label_bottom_group = displayio.Group()
+unit_label_bottom_label = prepare_label(terminalio.FONT, "mg/dL", 0xFFFFFF, (0.5, 0.5), (230, 170), unit_label_bottom_group)
+settings_view.append(unit_label_bottom_group)
+
 while True:
     p = ts.touch_point
     if p and time.monotonic() - last_touch >= 1.0:
-        pyportal.play_file(soundBeep)
-        print("Touch detected.")
         last_touch = time.monotonic()
-        if board.DISPLAY.brightness != 0.0:
-            set_backlight(0.0)
-        else:
-            set_backlight(0.9)
+        if display_mode.mode == "GLUCOSE" and p[0] > 260 and p[1] > 0 and p[1] < 60:
+            # switch to settings screen
+            display_mode.change("SETTINGS")
+            play_tap_sound(pyportal)
+            screen_group.remove(glucose_view)
+            screen_group.append(settings_view)
+        elif display_mode.mode == "SETTINGS":
+            # switch to settings screen
+            if p[0] < 60 and p[1] < 60:
+                # back clicked
+                display_mode.change("GLUCOSE")
+                play_tap_sound(pyportal)
+                screen_group.remove(settings_view)
+                screen_group.append(glucose_view)
+            elif p[0] >= 40 and p[0] <= 130 and p[1] >= 70 and p[1] <= 170:
+                # sleep
+                display_mode.change("OFF")
+                play_tap_sound(pyportal)
+                screen_group.remove(settings_view)
+                screen_group.append(glucose_view)
+                set_backlight(0.0)
+            elif p[0] >= 180 and p[0] <= 280 and p[1] >= 70 and p[1] <= 170:
+                # unit
+                play_tap_sound(pyportal)
+                dexcom_object.use_mmol = not dexcom_object.use_mmol
+                glucose_value.update_unit(glucose_label, glucose_unit_label, dexcom_object.use_mmol)
+                display_mode.change("GLUCOSE")
+                screen_group.remove(settings_view)
+                screen_group.append(glucose_view)
+        elif display_mode.mode == "OFF":
+            play_tap_sound(pyportal)
+            display_mode.change("GLUCOSE")
+            board.DISPLAY.auto_brightness = True
     # Prevent to frequent update calls, wait for 10s between API calls
     # Disable update when screen is off
     if time.monotonic() - timer >= 30.0 and board.DISPLAY.brightness > 0.0:
@@ -238,5 +311,5 @@ while True:
         if datetime.now() >= dexcom_object.next_update:
             glucose_value = dexcom_object.get_latest_glucose_value(requests)
             glucose_value.update_view(
-                glucose_sprites, glucose_label, glucose_unit_label, glucose_update_label, offset
+                glucose_sprites, glucose_label, glucose_unit_label, glucose_update_label, offset, dexcom_object.use_mmol
             )
