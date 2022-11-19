@@ -2,6 +2,8 @@ from adafruit_datetime import datetime
 
 # http://www.bcchildrens.ca/endocrinology-diabetes-site/documents/glucoseunits.pdf
 def mgdl_to_mmol(mgdl: int):
+    if mgdl is None:
+        return None
     return round(mgdl / 18.0182, 1)
 
 
