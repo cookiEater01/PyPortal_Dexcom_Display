@@ -250,6 +250,10 @@ sleep_tg = load_sprite_sheet("/images/sleep.bmp", 80, 80)
 sleep_sprites = Sprites(sleep_tg, 1, sleep_button_group)
 sleep_sprites.add_to_group()
 
+sleep_label_bottom_group = displayio.Group()
+sleep_label_bottom_label = prepare_label(terminalio.FONT, "Turn off", 0xFFFFFF, (0.5, 0.5), (90, 170), sleep_label_bottom_group)
+settings_view.append(sleep_label_bottom_group)
+
 # Add unit image group to view
 settings_view.append(unit_button_group)
 
