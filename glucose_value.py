@@ -4,7 +4,7 @@ from sprites import Sprites
 from time_zone import TimeZone
 
 TRENDS = {
-    "Unknown": 0,
+    "NotComputable": 0,
     "Flat": 1,
     "FortyFiveUp": 2,
     "SingleUp": 3,
