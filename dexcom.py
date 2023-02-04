@@ -134,4 +134,4 @@ class Dexcom:
             latest = response_array[0]
             return GlucoseValue(int(latest["Value"]), latest["Trend"], get_dt_from_epoch(latest["WT"]))
         else:
-            return GlucoseValue(None, "Unknown", datetime.now().isoformat())
+            return GlucoseValue(None, "NotComputable", datetime.now().isoformat())
