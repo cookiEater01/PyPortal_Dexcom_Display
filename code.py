@@ -25,12 +25,12 @@ from dexcom import Dexcom, GlucoseValue
 # Time
 import rtc
 from adafruit_datetime import datetime, timedelta
-from time_zone import TimeZone
+from time_utils import get_time, get_timezone_offset
 
 # Sensors
 from analogio import AnalogIn
 
-from const import TIMEZONE
+
 
 
 print("Starting up...")
@@ -132,8 +132,6 @@ print("My IP address is", esp.pretty_ip(esp.ip_address))
 loading_sprites.update_tile(1)
 loading_status_label.text = "Acquiring time ..."
 
-time.sleep(6)
-
 # Initialize a requests object with a socket and esp32spi interface
 socket.set_interface(esp)
 requests.set_socket(socket, esp)
@@ -141,18 +139,10 @@ requests.set_socket(socket, esp)
 time.sleep(6)
 
 # get_time will raise OSError if the time isn't available yet so loop until it works.
-now_utc = None
-print("Waiting for ESP to aquire localtime.", end=" ")
-while now_utc is None:
-    try:
-        esp_time = esp.get_time()
-        now_utc = time.localtime(esp_time[0])
-        print("Time aquired.")
-    except OSError:
-        pass
-rtc.RTC().datetime = now_utc
+get_time(esp, time, rtc)
+last_time_fetch = time.monotonic()
+offset = get_timezone_offset(requests, time, timedelta)
 
-offset = TimeZone(TIMEZONE, requests, time, timedelta)
 
 # Show last sprite in loading sequence and update and break text
 loading_sprites.update_tile(2)
@@ -313,12 +303,19 @@ while True:
             play_tap_sound(pyportal)
             display_mode.change("GLUCOSE")
             board.DISPLAY.auto_brightness = True
-    # Prevent to frequent update calls, wait for 10s between API calls
+    # Prevent to frequent update calls, wait for 30s between API calls
     # Disable update when screen is off
     if time.monotonic() - timer >= 30.0 and board.DISPLAY.brightness > 0.0:
-        timer = time.monotonic()
+        print("Performing glucose value update.")
         if datetime.now() >= dexcom_object.next_update:
             glucose_value = dexcom_object.get_latest_glucose_value(requests)
             glucose_value.update_view(
                 glucose_sprites, glucose_label, glucose_unit_label, glucose_update_label, offset, dexcom_object.use_mmol
             )
+        timer = time.monotonic()
+
+    # Update internal clock, if screen is not turned off
+    if board.DISPLAY.brightness > 0.0 and time.monotonic() - last_time_fetch >= 1800:
+        print("Performing clock update.")
+        get_time(esp, time, rtc)
+        last_time_fetch = time.monotonic()
