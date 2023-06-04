@@ -21,7 +21,7 @@ class TimeZone:
 
                 offset_str = response_json["utc_offset"]
                 self.convert_offset(offset_str, timedelta)
-            except (ValueError, RuntimeError) as e:
+            except (ValueError, RuntimeError, OSError, OutOfRetries) as e:
                 print("An error occurred:", e)
                 retries += 1
                 time.sleep(1)
