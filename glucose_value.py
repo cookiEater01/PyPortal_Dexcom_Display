@@ -1,7 +1,6 @@
 from adafruit_datetime import datetime, timedelta
 from utils import mgdl_to_mmol
 from sprites import Sprites
-from time_zone import TimeZone
 
 TRENDS = {
     "NotComputable": 0,
@@ -38,7 +37,7 @@ class GlucoseValue:
             unit_label.text = "mg/dL"
 
     def update_view(
-        self, sprites, value_label, unit_label, update_label, offset, use_mmol: bool
+        self, sprites, value_label, unit_label, update_label, offset: int, use_mmol: bool
     ):
         if self.mmol is None:
             sprites.update_tile(self.trend_numeric)
@@ -64,7 +63,7 @@ class GlucoseValue:
             else:
                 value_label.text = str(self.mgdl)
                 unit_label.text = "mg/dL"
-        tmp_time = self.time + timedelta(seconds=int(offset.offset))
+        tmp_time = self.time + timedelta(seconds=offset)
         update_label.text = "{:02d}:{:02d}".format(
             tmp_time.time().hour, tmp_time.time().minute
         )
