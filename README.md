@@ -1,6 +1,6 @@
 # **PyPortal with Dexcom G6 sensor**!
 
-Ever since I got Dexcom G6 sensor I wanted to view my glucose level with unlocking the phone. Now this is possible.
+Ever since I got Dexcom G6 sensor I wanted to view my glucose level without unlocking the phone while I'm sitting at my desk. Now this is possible.
 
 
 ## Prerequisites
