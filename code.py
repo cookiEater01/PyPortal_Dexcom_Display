@@ -114,7 +114,8 @@ except ImportError:
     print("WiFi secrets are kept in secrets.py, please add them there!")
     raise
 
-requests.set_socket(socket, esp)
+time.sleep(6)
+# requests.set_socket(socket, esp)
 
 
 print("Connecting to WiFi %s..." % secrets["ssid"])
@@ -131,9 +132,13 @@ print("My IP address is", esp.pretty_ip(esp.ip_address))
 loading_sprites.update_tile(1)
 loading_status_label.text = "Acquiring time ..."
 
+time.sleep(6)
+
 # Initialize a requests object with a socket and esp32spi interface
 socket.set_interface(esp)
 requests.set_socket(socket, esp)
+
+time.sleep(6)
 
 # get_time will raise OSError if the time isn't available yet so loop until it works.
 now_utc = None
@@ -147,7 +152,7 @@ while now_utc is None:
         pass
 rtc.RTC().datetime = now_utc
 
-offset = TimeZone(TIMEZONE, requests)
+offset = TimeZone(TIMEZONE, requests, time, timedelta)
 
 # Show last sprite in loading sequence and update and break text
 loading_sprites.update_tile(2)
