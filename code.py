@@ -13,31 +13,34 @@ import adafruit_touchscreen
 import displayio
 from adafruit_pyportal import PyPortal
 from display_utils import black_background, text_box, load_sprite_sheet, prepare_label, prepare_group, play_tap_sound
-from adafruit_display_text.label import Label
+# from adafruit_display_text.label import Label
 from adafruit_bitmap_font import bitmap_font
 from sprites import Sprites
 import terminalio
 from display_mode import DisplayMode
 
 # Dexcom
-from dexcom import Dexcom, GlucoseValue
+from dexcom import Dexcom  # , GlucoseValue
 
 # Time
 import rtc
 from adafruit_datetime import datetime, timedelta
 from time_utils import get_time, get_timezone_offset
+from utils import set_backlight
 
 # Sensors
-from analogio import AnalogIn
-
-
+# from analogio import AnalogIn
 
 
 print("Starting up...")
 
 # Board settings
 pixel = neopixel.NeoPixel(board.NEOPIXEL, 1, brightness=0)
-light_sensor = AnalogIn(board.LIGHT)
+# light_sensor is uselles because it is located above the usb port and is
+# hidden behind the plastic housing.
+# light_sensor = AnalogIn(board.LIGHT)
+display_turned_off = False
+
 
 # ESP32
 esp32_cs = DigitalInOut(board.ESP_CS)
@@ -49,6 +52,9 @@ esp = adafruit_esp32spi.ESP_SPIcontrol(spi, esp32_cs, esp32_ready, esp32_reset)
 
 # Display
 display = board.DISPLAY
+
+# Default brightness is 0.99
+set_backlight(0.75, display)
 
 WIDTH = board.DISPLAY.width
 HEIGHT = board.DISPLAY.height
@@ -82,7 +88,7 @@ settings_view = displayio.Group()
 screen_group.append(loading_view)
 
 # Group for loading image(s)
-loading_image_group = prepare_group(110,40)
+loading_image_group = prepare_group(110, 40)
 
 # Loading images sprites
 loading_tg = load_sprite_sheet("/images/loading_sprites.bmp", 100, 100)
@@ -98,13 +104,6 @@ loading_status_label = prepare_label(terminalio.FONT, "Connecting to WIFI ...", 
 
 # Append loading_label_group to loading view
 loading_view.append(loading_label_group)
-
-# Backlight function
-# Value between 0 and 1 where 0 is OFF, 0.5 is 50% and 1 is 100% brightness.
-def set_backlight(val: float):
-    val = max(0, min(1.0, val))
-    board.DISPLAY.auto_brightness = False
-    board.DISPLAY.brightness = val
 
 
 # Get wifi details and more from a secrets.py file
@@ -267,10 +266,11 @@ unit_label_bottom_label = prepare_label(terminalio.FONT, "mg/dL", 0xFFFFFF, (0.5
 settings_view.append(unit_label_bottom_group)
 
 while True:
-    p = ts.touch_point
-    if p and time.monotonic() - last_touch >= 1.0:
+    touch = ts.touch_point
+
+    if touch and time.monotonic() - last_touch >= 1.0:
         last_touch = time.monotonic()
-        if display_mode.mode == "GLUCOSE" and p[0] > 260 and p[1] > 0 and p[1] < 60:
+        if display_mode.mode == "GLUCOSE" and touch[0] > 260 and touch[1] > 0 and touch[1] < 60:
             # switch to settings screen
             display_mode.change("SETTINGS")
             play_tap_sound(pyportal)
@@ -278,20 +278,21 @@ while True:
             screen_group.append(settings_view)
         elif display_mode.mode == "SETTINGS":
             # switch to settings screen
-            if p[0] < 60 and p[1] < 60:
+            if touch[0] < 60 and touch[1] < 60:
                 # back clicked
                 display_mode.change("GLUCOSE")
                 play_tap_sound(pyportal)
                 screen_group.remove(settings_view)
                 screen_group.append(glucose_view)
-            elif p[0] >= 40 and p[0] <= 130 and p[1] >= 70 and p[1] <= 170:
+            elif touch[0] >= 40 and touch[0] <= 130 and touch[1] >= 70 and touch[1] <= 170:
                 # sleep
                 display_mode.change("OFF")
                 play_tap_sound(pyportal)
                 screen_group.remove(settings_view)
                 screen_group.append(glucose_view)
-                set_backlight(0.0)
-            elif p[0] >= 180 and p[0] <= 280 and p[1] >= 70 and p[1] <= 170:
+                display_turned_off = True
+                set_backlight(0.0, display)
+            elif touch[0] >= 180 and touch[0] <= 280 and touch[1] >= 70 and touch[1] <= 170:
                 # unit
                 play_tap_sound(pyportal)
                 dexcom_object.use_mmol = not dexcom_object.use_mmol
@@ -302,7 +303,7 @@ while True:
         elif display_mode.mode == "OFF":
             play_tap_sound(pyportal)
             display_mode.change("GLUCOSE")
-            board.DISPLAY.auto_brightness = True
+            display_turned_off = False
     # Prevent to frequent update calls, wait for 30s between API calls
     # Disable update when screen is off
     if time.monotonic() - timer >= 30.0 and board.DISPLAY.brightness > 0.0:
