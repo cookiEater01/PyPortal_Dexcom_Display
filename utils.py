@@ -14,3 +14,9 @@ def get_dt_from_epoch(rsp: str):
     dt_iso = dt.isoformat()
 
     return dt_iso
+
+# Backlight function
+# Value between 0 and 1 where 0 is OFF, 0.5 is 50% and 1 is 100% brightness.
+def set_backlight(val: float, display):
+    val = max(0, min(1.0, val))
+    display.brightness = val
