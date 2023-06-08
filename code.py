@@ -304,6 +304,7 @@ while True:
             play_tap_sound(pyportal)
             display_mode.change("GLUCOSE")
             display_turned_off = False
+            set_backlight(0.75, display)
     # Prevent to frequent update calls, wait for 30s between API calls
     # Disable update when screen is off
     if time.monotonic() - timer >= 30.0 and board.DISPLAY.brightness > 0.0:
