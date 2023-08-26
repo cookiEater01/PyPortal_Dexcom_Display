@@ -112,7 +112,6 @@ class Dexcom:
         print("Posting request for glucose value")
 
 
-
         response = requests.post(
             self.base_url + DEXCOM_GLUCOSE_READINGS_ENDPOINT,
             data=json.dumps(body),
@@ -122,7 +121,7 @@ class Dexcom:
         if response.status_code == 200:
             response_array = response.json()
 
-            print("Response lenght: ", len(response_array))
+            print("Number of received glucose values: ", len(response_array))
             print("-" * 40)
 
             response.close()
@@ -138,3 +137,4 @@ class Dexcom:
                 return GlucoseValue(None, "NotComputable", datetime.now().isoformat())
         else:
             print("Response status: ", response.status_code)
+            return None
