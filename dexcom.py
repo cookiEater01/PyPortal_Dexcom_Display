@@ -119,19 +119,22 @@ class Dexcom:
             headers=header,
         )
 
-        response_array = response.json()
+        if response.status_code == 200:
+            response_array = response.json()
 
-        print("Response lenght: ", len(response_array))
-        print("-" * 40)
+            print("Response lenght: ", len(response_array))
+            print("-" * 40)
 
-        response.close()
+            response.close()
 
-        self.next_update = datetime.now() + timedelta(minutes=2)
-        self.num_of_errors = 0
-        self.session.last_used_time = datetime.now()
+            self.next_update = datetime.now() + timedelta(minutes=2)
+            self.num_of_errors = 0
+            self.session.last_used_time = datetime.now()
 
-        if len(response_array) > 0:
-            latest = response_array[0]
-            return GlucoseValue(int(latest["Value"]), latest["Trend"], get_dt_from_epoch(latest["WT"]))
+            if len(response_array) > 0:
+                latest = response_array[0]
+                return GlucoseValue(int(latest["Value"]), latest["Trend"], get_dt_from_epoch(latest["WT"]))
+            else:
+                return GlucoseValue(None, "NotComputable", datetime.now().isoformat())
         else:
-            return GlucoseValue(None, "NotComputable", datetime.now().isoformat())
+            print("Response status: ", response.status_code)
