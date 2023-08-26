@@ -167,7 +167,7 @@ print("-" * 40)
 
 # Prepare glucose view
 
-# Group for glucose unit
+# Group for settings button
 settings_icon_group = prepare_group(270, 0)
 
 settings_icon_tg = load_sprite_sheet("/images/gear.bmp", 50, 50)
@@ -216,6 +216,13 @@ glucose_view.append(glucose_update_group)
 glucose_value.update_view(
     glucose_sprites, glucose_label, glucose_unit_label, glucose_update_label, offset, dexcom_object.use_mmol
 )
+
+# Group for error icon
+warning_icon_group = prepare_group(0, 0)
+
+warning_icon_tg = load_sprite_sheet("/images/warning.bmp", 50, 50)
+warning_sprites = Sprites(warning_icon_tg, 1, warning_icon_group)
+glucose_view.append(warning_icon_group)
 
 # Switch views
 screen_group.remove(loading_view)
@@ -308,12 +315,18 @@ while True:
     # Prevent to frequent update calls, wait for 30s between API calls
     # Disable update when screen is off
     if time.monotonic() - timer >= 30.0 and board.DISPLAY.brightness > 0.0:
-        print("Performing glucose value update.")
+        print("Checking if glucose value update should be performed.")
         if datetime.now() >= dexcom_object.next_update:
+            print("Performing glucose value update.")
             glucose_value = dexcom_object.get_latest_glucose_value(requests)
-            glucose_value.update_view(
-                glucose_sprites, glucose_label, glucose_unit_label, glucose_update_label, offset, dexcom_object.use_mmol
-            )
+            if glucose_value is not None:
+                warning_sprites.remove_from_group()
+                glucose_value.update_view(
+                    glucose_sprites, glucose_label, glucose_unit_label, glucose_update_label, offset, dexcom_object.use_mmol
+                )
+            else:
+                print("Update failed.")
+                warning_sprites.add_to_group()
         timer = time.monotonic()
 
     # Update internal clock, if screen is not turned off
