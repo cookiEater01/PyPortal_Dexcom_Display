@@ -1,3 +1,3 @@
-Adafruit CircuitPython 8.1.0 on 2023-05-22; Adafruit PyPortal with samd51j20
+Adafruit CircuitPython 8.2.9 on 2023-12-06; Adafruit PyPortal with samd51j20
 Board ID:pyportal
 UID:2260A007345243532020204136140BFF
