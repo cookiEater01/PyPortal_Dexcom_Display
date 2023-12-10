@@ -1,9 +1,10 @@
 from const import TIMEZONE, WORLD_TIME_API_ENDPOINT
 from adafruit_requests import OutOfRetries
 
+
 def get_time(esp, time, rtc):
     now_utc = None
-    print("Waiting for ESP to aquire localtime.", end=" ")
+    print("Waiting for ESP to acquire localtime.", end=" ")
     while now_utc is None:
         try:
             esp_time = esp.get_time()
