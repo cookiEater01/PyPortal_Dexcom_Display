@@ -1,22 +1,38 @@
-from adafruit_datetime import datetime
+from adafruit_datetime import datetime, timedelta
+
 
 # http://www.bcchildrens.ca/endocrinology-diabetes-site/documents/glucoseunits.pdf
-def mgdl_to_mmol(mgdl: int):
+def mgdl_to_mmol(mgdl: int | None):
     if mgdl is None:
         return None
     return round(mgdl / 18.0182, 1)
 
 
-def get_dt_from_epoch(rsp: str):
-    correct_rsp = rsp.strip("\)").replace("Date(", "")
+def parse_date(input_str: str) -> datetime:
+    # Remove 'Date(' and ')' from the input string
+    input_str = input_str.replace('Date(', '').replace(')', '')
 
-    dt = datetime.fromtimestamp(int(correct_rsp) / 1000.0)
-    dt_iso = dt.isoformat()
+    # Split the input string into timestamp and offset (if present)
+    parts = input_str.split('+')
 
-    return dt_iso
+    # Extract timestamp from the first part
+    timestamp_str = parts[0][:-3]
+    timestamp = int(timestamp_str)
 
-# Backlight function
-# Value between 0 and 1 where 0 is OFF, 0.5 is 50% and 1 is 100% brightness.
-def set_backlight(val: float, display):
-    val = max(0, min(1.0, val))
-    display.brightness = val
+    # Initialize offset to 0
+    offset = timedelta()
+
+    # If there is an offset part, parse it and update the offset
+    if len(parts) == 2:
+        offset_str = parts[1]
+        offset_hours = int(offset_str[:2])
+        offset_minutes = int(offset_str[2:])
+        offset = timedelta(hours=offset_hours, minutes=offset_minutes)
+
+    # Convert milliseconds to seconds and create a datetime object
+    dt = datetime.fromtimestamp(timestamp)
+
+    # Add the offset to the datetime object
+    dt_with_offset = dt + offset
+
+    return dt_with_offset
