@@ -13,12 +13,12 @@ from const import (
 )
 
 
-def trigger_glucose_update(old_glucose: DexcomGlucose, dexcom_session: DexcomSession, display: DisplayMode, num_of_retries: int):
+def trigger_glucose_update(old_glucose: DexcomGlucose, dexcom_session: DexcomSession, display: DisplayMode, num_of_retries: int, offset: int):
     print("-" * 40)
     print("Triggering glucose update.")
     display.add_refreshing()
     old_time = old_glucose.utc_time
-    new_glucose = get_latest_glucose_value(dexcom_session)
+    new_glucose = get_latest_glucose_value(dexcom_session, offset)
     dexcom_session.last_time_used = datetime.now()
     sleep_for: int
 
@@ -35,10 +35,12 @@ def trigger_glucose_update(old_glucose: DexcomGlucose, dexcom_session: DexcomSes
             display.add_warning()
             sleep_for = 60
         elif num_of_retries == 4:
-            sleep_for = 180
+            sleep_for = 120
         else:
+            new_glucose.mgdl = None
+            new_glucose.mmol = None
             display.update_glucose(new_glucose)
-            sleep_for = 300
+            sleep_for = 150
     else:
         print("Successfully received new glucose.")
         num_of_retries = 0
@@ -52,10 +54,10 @@ def trigger_glucose_update(old_glucose: DexcomGlucose, dexcom_session: DexcomSes
         sleep_for = max(1, diff.total_seconds())
     display.remove_refreshing()
     print("Sleep for " + str(sleep_for) + "s.")
-    return new_glucose, num_of_retries, time.monotonic() + sleep_for
+    return new_glucose, num_of_retries, datetime.now() + timedelta(seconds=sleep_for)
 
 
-def get_latest_glucose_value(dexcom_session: DexcomSession):
+def get_latest_glucose_value(dexcom_session: DexcomSession, offset: int):
     # Get latest glucose value
     print("Getting latest glucose value...")
 
@@ -86,7 +88,7 @@ def get_latest_glucose_value(dexcom_session: DexcomSession):
             latest = response_array[0]
             return DexcomGlucose(int(latest["Value"]), latest["Trend"], parse_date(latest["DT"]), parse_date(latest["WT"]))
         else:
-            return DexcomGlucose(None, "NotComputable", datetime.now(), datetime.now())
+            return DexcomGlucose(None, "NotComputable", datetime.now() + timedelta(seconds=offset), datetime.now())
     else:
         print("Response status: ", response.status_code)
-        return DexcomGlucose(None, "NotComputable", datetime.now(), datetime.now())
+        return DexcomGlucose(None, "NotComputable", datetime.now() + timedelta(seconds=offset), datetime.now())
