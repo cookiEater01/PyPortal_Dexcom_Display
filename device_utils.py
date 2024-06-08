@@ -1,13 +1,14 @@
 import board
 from digitalio import DigitalInOut
 import busio
+import os
 from adafruit_esp32spi import adafruit_esp32spi
 import adafruit_touchscreen
 from adafruit_pyportal import PyPortal
 import neopixel
 import time
-import adafruit_esp32spi.adafruit_esp32spi_socket as socket
-import adafruit_requests as requests
+import adafruit_connection_manager
+import adafruit_requests
 
 
 def set_up_led():
@@ -21,13 +22,14 @@ def set_up_led():
 
 def set_up_esp():
     print("Setting ESP...")
+
     # ESP32
     esp32_cs = DigitalInOut(board.ESP_CS)
     esp32_ready = DigitalInOut(board.ESP_BUSY)
     esp32_reset = DigitalInOut(board.ESP_RESET)
 
     spi = busio.SPI(board.SCK, board.MOSI, board.MISO)
-    esp = adafruit_esp32spi.ESP_SPIcontrol(spi, esp32_cs, esp32_ready, esp32_reset)
+    esp_radio = adafruit_esp32spi.ESP_SPIcontrol(spi, esp32_cs, esp32_ready, esp32_reset)
 
     # Display
     display = board.DISPLAY
@@ -46,8 +48,8 @@ def set_up_esp():
         calibration=((5200, 59000), (5800, 57000)),
         size=(width, height),
     )
-    py_portal = PyPortal(esp=esp, external_spi=spi)
-    return width, height, py_portal, display, esp, ts
+    py_portal = PyPortal(esp=esp_radio, external_spi=spi)
+    return width, height, py_portal, display, esp_radio, ts
 
 
 # Backlight function
@@ -58,28 +60,19 @@ def set_backlight(val: float, display):
     display.brightness = val
 
 
-def connect_to_wifi(esp):
+def connect_to_wifi(esp32_radio):
     # Get Wi-Fi details and more from a secrets.py file
-    try:
-        from secrets import secrets
-    except ImportError:
-        print("WiFi secrets are kept in secrets.py, please add them there!")
-        raise
+    wifi_ssid = os.getenv("WIFI_SSID")
+    wifi_password = os.getenv("WIFI_PASSWORD")
 
     time.sleep(6)
-    print("Connecting to WiFi %s..." % secrets["ssid"])
-    while not esp.is_connected:
+    print("Connecting to WiFi %s..." % wifi_ssid)
+    while not esp32_radio.is_connected:
         try:
-            esp.connect(secrets)
+            esp32_radio.connect_AP(wifi_ssid, wifi_password)
         except OSError as e:
             print("Could not connect to WiFI, retrying: ", e)
             continue
-    print("Connected to", str(esp.ssid, "utf-8"), "\tRSSI:", esp.rssi)
-    print("My IP address is", esp.pretty_ip(esp.ip_address))
-    return secrets
-
-
-def init_requests(esp32):
-    print("Init requests...")
-    socket.set_interface(esp32)
-    requests.set_socket(socket, esp32)
+    print("Connected to", str(esp32_radio.ssid, "utf-8"), "\tRSSI:", esp32_radio.rssi)
+    print("My IP address is", esp32_radio.pretty_ip(esp32_radio.ip_address))
+    return
