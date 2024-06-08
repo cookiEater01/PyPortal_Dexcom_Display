@@ -1,5 +1,4 @@
 from adafruit_datetime import datetime
-from utils import mgdl_to_mmol
 
 TRENDS = {
     "NotComputable": 0,
@@ -16,14 +15,37 @@ TRENDS = {
 class DexcomGlucose:
     # Class for storing latest glucose value, trend and time of measurement
 
-    def __init__(self, mgdl: int | None, trend: str, local_time: datetime, utc_time: datetime):
+    def __init__(self, display: DisplayMode, mgdl: int | None, mmol: float | None, trend: str = "NotComputable", datetime: datetime = None, time: str = "", invalid: bool = True):
+        self.display: DisplayMode = display
         self.mgdl: int | None = mgdl
-        self.mmol: int | None = mgdl_to_mmol(mgdl)
+        self.mmol: float | None = mmol
         self.trend: str = trend
         self.trend_numeric = TRENDS[self.trend]
-        self.local_time = local_time
-        self.utc_time = utc_time
+        self.datetime: datetime | None = datetime
+        self.time = time
+        self.invalid = invalid
         print(self)
+        if self.invalid:
+            self.display.add_warning()
+        else:
+            self.display.remove_warning()
+        self.display.update_glucose(self)
 
     def __repr__(self):
-        return f"<GlucoseValue mgdl:{self.mgdl} mmol:{self.mmol} trend:{self.trend} dt:{self.local_time} wt:{self.utc_time}>"
+        return f"<GlucoseValue mgdl:{self.mgdl} mmol:{self.mmol} trend:{self.trend} dt:{self.datetime} time:{self.time} invalid:{self.invalid}>"
+
+
+    def update_values(self, mgdl: int | None, mmol: float | None, trend: str, datetime: datetime, time: str, invalid: bool):
+        self.mgdl = mgdl
+        self.mmol = mmol
+        self.trend = trend
+        self.trend_numeric = TRENDS[self.trend]
+        self.datetime = datetime
+        self.time = time
+        self.invalid = invalid
+        print(self)
+        if self.invalid:
+            self.display.add_warning()
+        else:
+            self.display.remove_warning()
+        self.display.update_glucose(self)
