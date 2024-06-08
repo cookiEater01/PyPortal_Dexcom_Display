@@ -13,19 +13,19 @@ def play_tap_sound(pyportal):
 
 def load_symbols_main():
     # Set the font and preload letters
-    font = bitmap_font.load_font("/fonts/Roboto-Bold-60.bdf")
+    font = bitmap_font.load_font("/fonts/Roboto-Bold-60.bdf", displayio.Bitmap)
     font.load_glyphs(b"1234567890.-M")
     return font
 
 def load_symbols_decimal():
     # Set the font and preload letters
-    font = bitmap_font.load_font("/fonts/Roboto-Medium-40.bdf")
+    font = bitmap_font.load_font("/fonts/Roboto-Medium-40.bdf", displayio.Bitmap)
     font.load_glyphs(b"1234567890M")
     return font
 
 def load_symbols():
     # Set the font and preload letters
-    font = bitmap_font.load_font("/fonts/Roboto-Regular-12.bdf")
+    font = bitmap_font.load_font("/fonts/Roboto-Regular-12.bdf", displayio.Bitmap)
     font.load_glyphs(b"lmoLM1234567890- ()/.")
     return font
 
@@ -33,7 +33,7 @@ def load_symbols():
 def create_and_show_group(display, width, height):
     group = displayio.Group()
     group.append(add_black_background(width, height))
-    display.show(group)
+    display.root_group = group
     return group
 
 
@@ -84,7 +84,6 @@ def create_glucose_group(font_main, font_decimal, font_other, use_us: bool):
     sleep_icon_group = prepare_group(270, 0)
     glucose_update_dt_group = displayio.Group()
     warning_icon_group = prepare_group(0, 0)
-    refreshing_icon_group = prepare_group(0, 190)
 
 
     # Glucose image sprites
@@ -105,8 +104,8 @@ def create_glucose_group(font_main, font_decimal, font_other, use_us: bool):
                                        0x616d7c, (0.5, 0.5), (160, 165))
     glucose_unit_group.append(glucose_unit_label)
 
-    # Glucose datetime
-    glucose_update_dt_label = prepare_label(font_other, "", 0x000000, (0.5, 0.5), (160, 230))
+    # Glucose time
+    glucose_update_dt_label = prepare_label(terminalio.FONT, "", 0x000000, (0.5, 0.5), (160, 230))
     glucose_update_dt_group.append(glucose_update_dt_label)
 
     # Sleep button
@@ -119,10 +118,6 @@ def create_glucose_group(font_main, font_decimal, font_other, use_us: bool):
     warning_icon_tg = load_sprite_sheet("/images/warning.bmp", 50, 50)
     warning_sprites = Sprites(warning_icon_tg, 1, warning_icon_group)
 
-    # Glucose refreshing icon
-    refreshing_icon_tg = load_sprite_sheet("/images/refreshing.bmp", 50, 50)
-    refreshing_sprites = Sprites(refreshing_icon_tg, 1, refreshing_icon_group)
-
     # Add subgroups to main group
     glucose_group.append(glucose_image_group)
     glucose_group.append(glucose_value_group)
@@ -130,20 +125,19 @@ def create_glucose_group(font_main, font_decimal, font_other, use_us: bool):
     glucose_group.append(glucose_update_dt_group)
     glucose_group.append(sleep_icon_group)
     glucose_group.append(warning_icon_group)
-    glucose_group.append(refreshing_icon_group)
 
     return (glucose_group, glucose_sprites, glucose_main_label, glucose_decimal_label, glucose_unit_label,
-            glucose_update_dt_label, warning_sprites, refreshing_sprites)
+            glucose_update_dt_label, warning_sprites)
 
 
-def create_loading_group(width, height, font):
+def create_loading_group(width, height):
     loading_group = displayio.Group()
     # Group for loading image(s)
     loading_image_group = prepare_group(110, 40)
 
     # Loading images sprites
     loading_tg = load_sprite_sheet("/images/loading_sprites.bmp", 100, 100)
-    loading_sprites = Sprites(loading_tg, 3, loading_image_group)
+    loading_sprites = Sprites(loading_tg, 2, loading_image_group)
     loading_sprites.add_to_group()
 
     # Add loading image group to loading view
@@ -151,7 +145,7 @@ def create_loading_group(width, height, font):
 
     # Group and loading label
     loading_label_group = displayio.Group()
-    loading_status_label = prepare_label(font, "Connecting to WIFI ...", 0x616d7c, (0.5, 0.5),
+    loading_status_label = prepare_label(terminalio.FONT, "Connecting to WIFI ...", 0x616d7c, (0.5, 0.5),
                                          (width / 2, height * 3 / 4))
     loading_label_group.append(loading_status_label)
 
