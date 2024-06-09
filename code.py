@@ -77,6 +77,8 @@ while True:
             connect_to_wifi(esp32_radio)
             display_class.display_loading_mqtt(py_portal)
             mqtt_client.reconnect()
+            time.sleep(1)
+            mqtt_client.subscribe(mqtt_topic)
             glucose_value_holder.glucose_value = DexcomGlucose(display_class, None, None)
 
     if display_turned_off is False:
