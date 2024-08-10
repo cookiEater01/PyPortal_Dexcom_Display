@@ -50,7 +50,6 @@ last_touch = time.monotonic()
 while True:
 
     touch = ts.touch_point
-    print(touch)
 
     if touch and time.monotonic() - last_touch >= 1.5:
         last_touch = time.monotonic()

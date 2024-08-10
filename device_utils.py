@@ -73,6 +73,6 @@ def connect_to_wifi(esp32_radio):
         except OSError as e:
             print("Could not connect to WiFI, retrying: ", e)
             continue
-    print("Connected to", str(esp32_radio.ssid, "utf-8"), "\tRSSI:", esp32_radio.rssi)
+    print("Connected to", str(esp32_radio.ap_info.ssid, "utf-8"), "\tRSSI:", esp32_radio.ap_info.rssi)
     print("My IP address is", esp32_radio.pretty_ip(esp32_radio.ip_address))
     return
